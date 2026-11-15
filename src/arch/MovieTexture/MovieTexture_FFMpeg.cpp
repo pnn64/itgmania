@@ -121,9 +121,15 @@ RageSurface* RageMovieTextureDriver_FFMpeg::AVCodecCreateCompatibleSurface(
     iTextureWidth /= 2;
   }
 
-  return CreateSurface(
-      iTextureWidth, iTextureHeight, pfd->bpp, pfd->masks[0], pfd->masks[1],
+  // libswscale's SIMD converters can write the final complete pixel group
+  // beyond the visible width. Give every row padding, including the last;
+  // retain the logical width so texture uploads never expose that padding.
+  const int padded_width = (iTextureWidth + 31) / 32 * 32;
+  RageSurface* surface = CreateSurface(
+      padded_width, iTextureHeight, pfd->bpp, pfd->masks[0], pfd->masks[1],
       pfd->masks[2], pfd->masks[3]);
+  surface->w = iTextureWidth;
+  return surface;
 }
 
 MovieDecoder_FFMpeg::MovieDecoder_FFMpeg() {
