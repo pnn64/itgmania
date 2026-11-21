@@ -143,6 +143,15 @@ enum TrackMapping {
 void Turn(
     NoteData& inout, StepsType st, TrackMapping tt, int iStartIndex = 0,
     int iEndIndex = MAX_NOTE_ROW);
+/**
+ * @brief Find where the turn mods in po move each column of a chart.
+ *
+ * After TransformNoteData(), track t holds the notes that were in track
+ * iTakeFromTrack[t] of the original chart. Super and hyper shuffle scatter
+ * individual notes instead of moving whole columns, so they give the
+ * identity mapping. */
+void GetTurnTrackMapping(
+    const PlayerOptions& po, StepsType st, int iNumTracks, int* iTakeFromTrack);
 void Little(NoteData& inout, int iStartIndex = 0, int iEndIndex = MAX_NOTE_ROW);
 void Wide(NoteData& inout, int iStartIndex = 0, int iEndIndex = MAX_NOTE_ROW);
 void Big(NoteData& inout, int iStartIndex = 0, int iEndIndex = MAX_NOTE_ROW);

@@ -1575,9 +1575,37 @@ void NoteDisplay::DrawTap(
   }
 }
 
+const NCSplineHandler* NoteColumnRenderer::ActiveHandler(
+    NCSplineHandler NCR_TweenState::* handler) const {
+  const NCSplineHandler& own = NCR_current.*handler;
+  if (m_chart_source == nullptr) {
+    return &own;
+  }
+  // A spline that doesn't subtract the song beat is keyed to the chart's
+  // beats, so it belongs to particular notes rather than a place on screen.
+  // When a turn mod moves those notes into this column, the spline comes
+  // with them.
+  const NCSplineHandler& from_chart = m_chart_source->NCR_current.*handler;
+  if (!from_chart.m_subtract_song_beat_from_curr) {
+    return &from_chart;
+  }
+  // Ours is keyed to the chart too, but its notes are in another column now.
+  if (!own.m_subtract_song_beat_from_curr) {
+    static const NCSplineHandler no_spline;
+    return &no_spline;
+  }
+  return &own;
+}
+
 void NoteColumnRenderer::UpdateReceptorGhostStuff(Actor* receptor) const {
   const PlayerState* player_state = m_field_render_args->player_state;
   float song_beat = player_state->GetDisplayedPosition().m_fSongBeatVisible;
+  const NCSplineHandler& pos_handler =
+      *ActiveHandler(&NCR_TweenState::m_pos_handler);
+  const NCSplineHandler& rot_handler =
+      *ActiveHandler(&NCR_TweenState::m_rot_handler);
+  const NCSplineHandler& zoom_handler =
+      *ActiveHandler(&NCR_TweenState::m_zoom_handler);
   // sp_* will be filled with the settings from the splines.
   // ae_* will be filled with the settings from ArrowEffects.
   // The two together will be applied to the actor.
@@ -1590,7 +1618,7 @@ void NoteColumnRenderer::UpdateReceptorGhostStuff(Actor* receptor) const {
   RageVector3 ae_pos;
   RageVector3 ae_rot;
   RageVector3 ae_zoom;
-  switch (NCR_current.m_pos_handler.m_spline_mode) {
+  switch (pos_handler.m_spline_mode) {
     case NCSM_Disabled:
       ArrowEffects::GetXYZPos(
           player_state, m_column, 0, m_field_render_args->reverse_offset_pixels,
@@ -1600,15 +1628,15 @@ void NoteColumnRenderer::UpdateReceptorGhostStuff(Actor* receptor) const {
       ArrowEffects::GetXYZPos(
           player_state, m_column, 0, m_field_render_args->reverse_offset_pixels,
           ae_pos);
-      NCR_current.m_pos_handler.EvalForReceptor(song_beat, sp_pos);
+      pos_handler.EvalForReceptor(song_beat, sp_pos);
       break;
     case NCSM_Position:
-      NCR_current.m_pos_handler.EvalForReceptor(song_beat, sp_pos);
+      pos_handler.EvalForReceptor(song_beat, sp_pos);
       break;
     default:
       break;
   }
-  switch (NCR_current.m_rot_handler.m_spline_mode) {
+  switch (rot_handler.m_spline_mode) {
     case NCSM_Disabled:
       ae_rot.z = ArrowEffects::ReceptorGetRotationZ(player_state, m_column);
       ae_rot.x = ArrowEffects::ReceptorGetRotationX(player_state, m_column);
@@ -1618,15 +1646,15 @@ void NoteColumnRenderer::UpdateReceptorGhostStuff(Actor* receptor) const {
       ae_rot.z = ArrowEffects::ReceptorGetRotationZ(player_state, m_column);
       ae_rot.x = ArrowEffects::ReceptorGetRotationX(player_state, m_column);
       ae_rot.y = ArrowEffects::ReceptorGetRotationY(player_state, m_column);
-      NCR_current.m_rot_handler.EvalForReceptor(song_beat, sp_rot);
+      rot_handler.EvalForReceptor(song_beat, sp_rot);
       break;
     case NCSM_Position:
-      NCR_current.m_rot_handler.EvalForReceptor(song_beat, sp_rot);
+      rot_handler.EvalForReceptor(song_beat, sp_rot);
       break;
     default:
       break;
   }
-  switch (NCR_current.m_zoom_handler.m_spline_mode) {
+  switch (zoom_handler.m_spline_mode) {
     case NCSM_Disabled:
       ae_zoom.x = ae_zoom.y = ae_zoom.z =
           ArrowEffects::GetZoom(player_state, 0, m_column);
@@ -1634,10 +1662,10 @@ void NoteColumnRenderer::UpdateReceptorGhostStuff(Actor* receptor) const {
     case NCSM_Offset:
       ae_zoom.x = ae_zoom.y = ae_zoom.z =
           ArrowEffects::GetZoom(player_state, 0, m_column);
-      NCR_current.m_zoom_handler.EvalForReceptor(song_beat, sp_zoom);
+      zoom_handler.EvalForReceptor(song_beat, sp_zoom);
       break;
     case NCSM_Position:
-      NCR_current.m_zoom_handler.EvalForReceptor(song_beat, sp_zoom);
+      zoom_handler.EvalForReceptor(song_beat, sp_zoom);
       break;
     default:
       break;
@@ -1652,9 +1680,12 @@ void NoteColumnRenderer::DrawPrimitives() {
   m_column_render_args.song_beat =
       m_field_render_args->player_state->GetDisplayedPosition()
           .m_fSongBeatVisible;
-  m_column_render_args.pos_handler = &NCR_current.m_pos_handler;
-  m_column_render_args.rot_handler = &NCR_current.m_rot_handler;
-  m_column_render_args.zoom_handler = &NCR_current.m_zoom_handler;
+  m_column_render_args.pos_handler =
+      ActiveHandler(&NCR_TweenState::m_pos_handler);
+  m_column_render_args.rot_handler =
+      ActiveHandler(&NCR_TweenState::m_rot_handler);
+  m_column_render_args.zoom_handler =
+      ActiveHandler(&NCR_TweenState::m_zoom_handler);
   m_column_render_args.diffuse = m_pTempState->diffuse[0];
   m_column_render_args.glow = m_pTempState->glow;
   m_field_render_args->first_beat =

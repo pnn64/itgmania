@@ -807,6 +807,20 @@ void Player::Load() {
     m_pNoteField->Load(
         &m_NoteData, iDrawDistanceAfterTargetsPixels,
         iDrawDistanceBeforeTargetsPixels);
+
+    // Rave and battle turn the notes again above, and shared sides puts both
+    // players in one field, so only tell the field about our own turns.
+    const Style* style = GAMESTATE->GetCurrentStyle(pn);
+    if (GAMESTATE->m_PlayMode != PLAY_MODE_RAVE &&
+        GAMESTATE->m_PlayMode != PLAY_MODE_BATTLE &&
+        style->m_StyleType != StyleType_TwoPlayersSharedSides) {
+      int iTakeFromTrack[MAX_NOTE_TRACKS];
+      NoteDataUtil::GetTurnTrackMapping(
+          m_pPlayerState->m_PlayerOptions.GetStage(), style->m_StepsType,
+          m_NoteData.GetNumTracks(), iTakeFromTrack);
+      m_pNoteField->SetChartColumnMapping(std::vector<int>(
+          iTakeFromTrack, iTakeFromTrack + m_NoteData.GetNumTracks()));
+    }
   }
 
   bool bPlayerUsingBothSides =

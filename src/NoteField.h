@@ -41,6 +41,9 @@ class NoteField : public ActorFrame {
 
   void ensure_note_displays_have_skin();
   void InitColumnRenderers();
+  // Column c holds the notes from chart column chart_column[c] after turn
+  // mods, as given by NoteDataUtil::GetTurnTrackMapping.
+  void SetChartColumnMapping(const std::vector<int>& chart_column);
 
   virtual void HandleMessage(const Message& msg);
 
@@ -107,8 +110,11 @@ class NoteField : public ActorFrame {
   void DrawBGChangeText(
       const float beat, const std::string new_bg_name, const RageColor& glow);
   float GetWidth() const;
+  void ApplyChartColumnMapping();
 
   const NoteData* m_pNoteData;
+  // Set by SetChartColumnMapping; empty means no column moved.
+  std::vector<int> m_chart_column;
 
   const PlayerState* m_pPlayerState;
   int m_iDrawDistanceAfterTargetsPixels;   // this should be a negative number

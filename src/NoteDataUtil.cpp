@@ -1920,6 +1920,50 @@ void NoteDataUtil::Turn(
   inout.RevalidateATIs(std::vector<int>(), false);
 }
 
+// The turns TransformNoteData applies, in the order it applies them.
+struct TurnStep {
+  PlayerOptions::Turn turn;
+  NoteDataUtil::TrackMapping mapping;
+};
+static const TurnStep kTurnSteps[] = {
+    {PlayerOptions::TURN_MIRROR, NoteDataUtil::mirror},
+    {PlayerOptions::TURN_LRMIRROR, NoteDataUtil::lrmirror},
+    {PlayerOptions::TURN_UDMIRROR, NoteDataUtil::udmirror},
+    {PlayerOptions::TURN_BACKWARDS, NoteDataUtil::backwards},
+    {PlayerOptions::TURN_LEFT, NoteDataUtil::left},
+    {PlayerOptions::TURN_RIGHT, NoteDataUtil::right},
+    {PlayerOptions::TURN_SHUFFLE, NoteDataUtil::shuffle},
+    {PlayerOptions::TURN_SOFT_SHUFFLE, NoteDataUtil::soft_shuffle},
+    {PlayerOptions::TURN_SUPER_SHUFFLE, NoteDataUtil::super_shuffle},
+    {PlayerOptions::TURN_HYPER_SHUFFLE, NoteDataUtil::hyper_shuffle},
+};
+
+void NoteDataUtil::GetTurnTrackMapping(
+    const PlayerOptions& po, StepsType st, int iNumTracks,
+    int* iTakeFromTrack) {
+  for (int t = 0; t < MAX_NOTE_TRACKS; ++t) {
+    iTakeFromTrack[t] = t;
+  }
+  if (po.m_bTurns[PlayerOptions::TURN_SUPER_SHUFFLE] ||
+      po.m_bTurns[PlayerOptions::TURN_HYPER_SHUFFLE]) {
+    return;
+  }
+
+  for (const TurnStep& step : kTurnSteps) {
+    if (!po.m_bTurns[step.turn]) {
+      continue;
+    }
+    int iStep[MAX_NOTE_TRACKS];
+    GetTrackMapping(st, step.mapping, iNumTracks, iStep);
+    // Turn() builds new track t from old track iStep[t].
+    int iPrevious[MAX_NOTE_TRACKS];
+    memcpy(iPrevious, iTakeFromTrack, sizeof(iPrevious));
+    for (int t = 0; t < iNumTracks; ++t) {
+      iTakeFromTrack[t] = iPrevious[iStep[t]];
+    }
+  }
+}
+
 void NoteDataUtil::Backwards(NoteData& inout) {
   NoteData out;
   out.SetNumTracks(inout.GetNumTracks());
@@ -2794,38 +2838,10 @@ void NoteDataUtil::TransformNoteData(
   }
 
   // Apply turns and shuffles last so that they affect inserts.
-  if (po.m_bTurns[PlayerOptions::TURN_MIRROR]) {
-    NoteDataUtil::Turn(nd, st, NoteDataUtil::mirror, iStartIndex, iEndIndex);
-  }
-  if (po.m_bTurns[PlayerOptions::TURN_LRMIRROR]) {
-    NoteDataUtil::Turn(nd, st, NoteDataUtil::lrmirror, iStartIndex, iEndIndex);
-  }
-  if (po.m_bTurns[PlayerOptions::TURN_UDMIRROR]) {
-    NoteDataUtil::Turn(nd, st, NoteDataUtil::udmirror, iStartIndex, iEndIndex);
-  }
-  if (po.m_bTurns[PlayerOptions::TURN_BACKWARDS]) {
-    NoteDataUtil::Turn(nd, st, NoteDataUtil::backwards, iStartIndex, iEndIndex);
-  }
-  if (po.m_bTurns[PlayerOptions::TURN_LEFT]) {
-    NoteDataUtil::Turn(nd, st, NoteDataUtil::left, iStartIndex, iEndIndex);
-  }
-  if (po.m_bTurns[PlayerOptions::TURN_RIGHT]) {
-    NoteDataUtil::Turn(nd, st, NoteDataUtil::right, iStartIndex, iEndIndex);
-  }
-  if (po.m_bTurns[PlayerOptions::TURN_SHUFFLE]) {
-    NoteDataUtil::Turn(nd, st, NoteDataUtil::shuffle, iStartIndex, iEndIndex);
-  }
-  if (po.m_bTurns[PlayerOptions::TURN_SOFT_SHUFFLE]) {
-    NoteDataUtil::Turn(
-        nd, st, NoteDataUtil::soft_shuffle, iStartIndex, iEndIndex);
-  }
-  if (po.m_bTurns[PlayerOptions::TURN_SUPER_SHUFFLE]) {
-    NoteDataUtil::Turn(
-        nd, st, NoteDataUtil::super_shuffle, iStartIndex, iEndIndex);
-  }
-  if (po.m_bTurns[PlayerOptions::TURN_HYPER_SHUFFLE]) {
-    NoteDataUtil::Turn(
-        nd, st, NoteDataUtil::hyper_shuffle, iStartIndex, iEndIndex);
+  for (const TurnStep& step : kTurnSteps) {
+    if (po.m_bTurns[step.turn]) {
+      NoteDataUtil::Turn(nd, st, step.mapping, iStartIndex, iEndIndex);
+    }
   }
 
   nd.RevalidateATIs(std::vector<int>(), false);

@@ -305,6 +305,9 @@ struct NoteColumnRenderer : public Actor {
   NoteFieldRenderArgs* m_field_render_args;
   NoteColumnRenderArgs m_column_render_args;
   int m_column;
+  // The column whose chart notes the turn mods moved into this one, or
+  // nullptr if they stayed put.
+  const NoteColumnRenderer* m_chart_source = nullptr;
 
   // UpdateReceptorGhostStuff takes care of the logic for making the ghost
   // and receptor positions follow the splines.  It's called by their row
@@ -356,6 +359,9 @@ struct NoteColumnRenderer : public Actor {
   }
 
  private:
+  const NCSplineHandler* ActiveHandler(
+      NCSplineHandler NCR_TweenState::* handler) const;
+
   std::vector<NCR_TweenState> NCR_Tweens;
   NCR_TweenState NCR_current;
   NCR_TweenState NCR_start;

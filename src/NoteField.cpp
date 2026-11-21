@@ -252,6 +252,7 @@ void NoteField::Load(
     int iDrawDistanceBeforeTargetsPixels) {
   ASSERT(pNoteData != nullptr);
   m_pNoteData = pNoteData;
+  m_chart_column.clear();
   m_iDrawDistanceAfterTargetsPixels = iDrawDistanceAfterTargetsPixels;
   m_iDrawDistanceBeforeTargetsPixels = iDrawDistanceBeforeTargetsPixels;
   ASSERT(
@@ -365,6 +366,24 @@ void NoteField::InitColumnRenderers() {
   }
   m_pCurDisplay->m_ReceptorArrowRow.SetColumnRenderers(m_ColumnRenderers);
   m_pCurDisplay->m_GhostArrowRow.SetColumnRenderers(m_ColumnRenderers);
+  ApplyChartColumnMapping();
+}
+
+void NoteField::SetChartColumnMapping(const std::vector<int>& chart_column) {
+  m_chart_column = chart_column;
+  ApplyChartColumnMapping();
+}
+
+void NoteField::ApplyChartColumnMapping() {
+  const int num_columns = static_cast<int>(m_ColumnRenderers.size());
+  for (int c = 0; c < num_columns; ++c) {
+    const int source =
+        c < static_cast<int>(m_chart_column.size()) ? m_chart_column[c] : c;
+    m_ColumnRenderers[c].m_chart_source =
+        (source != c && source >= 0 && source < num_columns)
+            ? &m_ColumnRenderers[source]
+            : nullptr;
+  }
 }
 
 void NoteField::Update(float fDeltaTime) {
