@@ -1354,6 +1354,18 @@ NoteData::const_iterator NoteData::upper_bound(int track, int row) const {
       [](int a, const RowTapNote& b) { return a < b.first; });
 }
 
+int NoteData::GetTrackForChartTap(int original_track, int row) const {
+  for (int track = 0; track < GetNumTracks(); ++track) {
+    const TapNote& note = GetTapNote(track, row);
+    if (note.type_ == TapNoteType_Tap &&
+        (note.original_track_ == -1 ? track : note.original_track_) ==
+            original_track) {
+      return track;
+    }
+  }
+  return -1;
+}
+
 NoteData::iterator NoteData::FindTapNote(unsigned track, int row) {
   auto it = lower_bound(track, row);
   if (it != tap_notes_[track].end() && it->first == row) {

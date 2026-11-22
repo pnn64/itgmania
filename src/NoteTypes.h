@@ -169,6 +169,9 @@ struct TapNote {
   /** @brief The Player that is supposed to hit this note. This is mainly for
    * Routine Mode. */
   PlayerNumber pn_;
+  // Column before the first turn, for foregrounds that refer to chart notes.
+  // Runtime only. An unturned note still belongs to its current column.
+  int original_track_ = -1;
 
   // used only if Type == attack:
   std::string attack_modifiers_;

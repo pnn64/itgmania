@@ -67,6 +67,7 @@ class NoteField : public ActorFrame {
   LuaReference did_hold_note_callback_;
 
   const PlayerState* GetPlayerState() const { return player_state_; }
+  const NoteData* GetNoteData() const { return note_data_; }
 
   int begin_marker_, end_marker_;  // only used with MODE_EDIT
 

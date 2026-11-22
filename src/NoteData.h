@@ -182,6 +182,8 @@ class NoteData {
   void Init();
 
   int GetNumTracks() const { return tap_notes_.size(); }
+  // Find the destination of a chart tap after applied turns, or -1 if absent.
+  int GetTrackForChartTap(int original_track, int row) const;
   void SetNumTracks(int new_num_tracks);
   bool IsComposite() const;
 
