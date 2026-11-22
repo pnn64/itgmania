@@ -31,7 +31,11 @@ local edits = {
 	{"if mt_stats.vis then", "if mt_stats.vis and lperm then"},
 	{"local lperm = lane_permute(pops, lane)", "local lperm = lane"},
 }
-local adapted = source
+-- Some variants also call lane_permute while constructing special effects.
+-- Only adapt the calls in the foreground's update function.
+local update = source:find("local multitap_update_function = function()", 1, true)
+if not update then return compile(source) end
+local adapted = source:sub(update)
 for _, edit in ipairs(edits) do
 	local first, last = adapted:find(edit[1], 1, true)
 	if not first or adapted:find(edit[1], last + 1, true) then return compile(source) end
@@ -55,7 +59,7 @@ local function turn_masks(groups, pn, player)
 		for i, beat in ipairs(group.taps) do
 			local column = field:GetColumnForChartTap(group.lane, beat)
 			columns[i] = column
-			if column then
+			if column and not group.hide then
 				-- A fixed turn moves the whole masked interval. A per-row
 				-- shuffle must leave unrelated notes between hits visible.
 				if per_row[pn] or not mask or column ~= mask.lane then
@@ -63,6 +67,25 @@ local function turn_masks(groups, pn, player)
 					masks[#masks + 1] = mask
 				end
 				mask.taps[#mask.taps + 1] = beat
+			end
+		end
+		-- Fire-arrow variants mask from the final bounce until an authored
+		-- end beat. Earlier bounces may be purely decorative.
+		if group.hide and #group.taps > 0 then
+			local last = group.taps[#group.taps]
+			if per_row[pn] then
+				for row = math.floor(last*48 + 0.5), math.floor(group.hide*48 + 0.5) do
+					local beat = row / 48
+					local col = field:GetColumnForChartTap(group.lane, beat)
+					if col then masks[#masks+1] = {lane = col, taps = {beat}} end
+				end
+			elseif columns[#group.taps] then
+				masks[#masks+1] = {lane = columns[#group.taps], taps = {last, group.hide}}
+			end
+			local previous = columns[#group.taps]
+			for i = 1, #group.taps do
+				columns[i] = columns[i] or previous
+				previous = columns[i]
 			end
 		end
 	end
@@ -77,5 +100,5 @@ end
 
 -- Keep the original chunk name so relative fonts and textures resolve in
 -- the song directory. Scope the helpers to this instance of the foreground.
-local chunk = compile("local turn_masks, turn_lane = ...; " .. adapted)
+local chunk = compile("local turn_masks, turn_lane = ...; " .. source:sub(1, update - 1) .. adapted)
 return function() return chunk(turn_masks, turn_lane) end
