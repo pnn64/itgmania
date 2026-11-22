@@ -246,6 +246,29 @@ Actor* ActorUtil::LoadFromNode(const XNode* p_node, Actor* parent_actor) {
 }
 
 namespace {
+bool LoadActorScript(
+    Lua* L, const std::string& file, const std::string& source,
+    std::string& error) {
+  // The same foreground is also distributed embedded in larger chart
+  // scripts, sometimes with its descriptors inline instead of in a file.
+  if (source.find("Multitap Factory & Assistance") != std::string::npos) {
+    lua_getglobal(L, "ActorUtil");
+    lua_getfield(L, -1, "LoadMultitapForeground");
+    lua_remove(L, -2);
+    if (lua_isfunction(L, -1)) {
+      LuaHelpers::Push(L, file);
+      LuaHelpers::Push(L, source);
+      if (LuaHelpers::RunScriptOnStack(L, error, 2, 1, false)) {
+        return true;
+      }
+      lua_pop(L, 1);
+      return false;
+    }
+    lua_pop(L, 1);
+  }
+  return LuaHelpers::LoadScript(L, source, "@" + file, error);
+}
+
 XNode* LoadXNodeFromLuaShowErrors(const std::string& file) {
   std::string script;
   if (!GetFileContents(file, script)) {
@@ -255,7 +278,7 @@ XNode* LoadXNodeFromLuaShowErrors(const std::string& file) {
   Lua* L = LUA->Get();
 
   std::string error;
-  if (!LuaHelpers::LoadScript(L, script, "@" + file, error)) {
+  if (!LoadActorScript(L, file, script, error)) {
     LUA->Release(L);
     error = ssprintf("Lua runtime error: %s", error.c_str());
     LuaHelpers::ReportScriptError(error);

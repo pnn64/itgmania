@@ -1925,6 +1925,16 @@ void NoteDataUtil::Turn(
     int end_index) {
   NoteData temp_note_data;
 
+  // Tag before moving whole columns or shuffling individual rows. The tag
+  // travels with the note through any subsequent turns.
+  for (int track = 0; track < inout.GetNumTracks(); ++track) {
+    for (auto it = inout.begin(track); it != inout.end(track); ++it) {
+      if (it->second.original_track_ == -1) {
+        it->second.original_track_ = track;
+      }
+    }
+  }
+
   if (tt == hyper_shuffle) {
     // HyperShuffle doesn't require a column transformation beforehand, so
     // there's no point in wasting time doing that.

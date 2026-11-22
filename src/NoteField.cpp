@@ -1545,6 +1545,24 @@ class LunaNoteField : public Luna<NoteField> {
     return 0;
   }
 
+  static int GetColumnForChartTap(T* p, lua_State* L) {
+    const int column = IArg(1);
+    const float beat = FArg(2);
+    const NoteData* data = p->GetNoteData();
+    if (!data || column < 1 || column > data->GetNumTracks() ||
+        !std::isfinite(beat) || beat < 0 ||
+        beat >= NoteRowToBeat(MAX_NOTE_ROW)) {
+      return 0;
+    }
+    const int track =
+        data->GetTrackForChartTap(column - 1, BeatToNoteRow(beat));
+    if (track < 0) {
+      return 0;
+    }
+    lua_pushinteger(L, track + 1);
+    return 1;
+  }
+
   static int get_column_actors(T* p, lua_State* L) {
     lua_createtable(L, p->column_renderers_.size(), 0);
     for (size_t i = 0; i < p->column_renderers_.size(); ++i) {
@@ -1579,6 +1597,7 @@ class LunaNoteField : public Luna<NoteField> {
     ADD_METHOD(did_tap_note);
     ADD_METHOD(did_hold_note);
     ADD_METHOD(get_column_actors);
+    ADD_METHOD(GetColumnForChartTap);
     ADD_METHOD(GetBeatBars);
     ADD_METHOD(SetBeatBars);
     ADD_METHOD(SetBeatBarsAlpha);
